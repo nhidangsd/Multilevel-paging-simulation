@@ -54,7 +54,17 @@ void parseArgs(int argc, char** argv, OPTION_ARGS* flags, unsigned int* addrLimi
 
 void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addrLimit,char* outputMode, int levelCount){
 
-    // Scan num of bits for each level from argv
+    FILE *ifp;	            // trace file
+    p2AddrTr trace;	        // traced address
+  
+    // attempt to open trace file 
+    int traceFileIndex = argc - levelCount - 1;
+    if ((ifp = fopen(argv[traceFileIndex], "rb")) == NULL) {
+        fprintf(stderr,"cannot open %s for reading\n", argv[traceFileIndex]);
+        exit(1);
+    }
+	
+     // Scan num of bits for each level from argv
     unsigned int bitAry[levelCount];
     unsigned int vpnBitLen = getBitAry(bitAry, levelCount, argc, argv);
 
@@ -68,57 +78,40 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
     //     printf("BitAry: %d\tMask: %08X\tShift: %i\tEntry Count: %i\n", bitAry[i], pageTab->bitmaskAry[i], pageTab->shiftAry[i], pageTab->entryCountAry[i]);
     // }
 
-
-
-    FILE *ifp;	            // trace file
-    p2AddrTr trace;	        // traced address
-  
-    // attempt to open trace file 
-    int traceFileIndex = argc - levelCount - 1;
-    if ((ifp = fopen(argv[traceFileIndex], "rb")) == NULL) {
-        fprintf(stderr,"cannot open %s for reading\n", argv[traceFileIndex]);
-        exit(1);
-    }
-	
-
-    int hits, misses;
-    hits = misses = 0;
-    unsigned int addrCount = 0;
-    unsigned int frame = 0;
+    unsigned int hits, misses, addrCount, frame, offset, logicalAddr;
+    hits = misses = addrCount = frame = 0;
     MAP* map;
-    unsigned int offset;
-    unsigned int logicalAddr;
+
     while (!feof(ifp)) {
 
-        // only the first N memory references if flag -n is on
+        // only the first N memory references if flag -n is ON
         if(flags.n && addrCount >= addrLimit){
             break;
         }
 
         // get next address and process
         if (NextAddress(ifp, &trace)) {
-
-            logicalAddr = (unsigned int)trace.addr;
-            offset = (logicalAddr << vpnBitLen) >> vpnBitLen;
-            // printf("\n===========Logical Addr: %08X\n", logicalAddr);
             addrCount++;
+            logicalAddr = (unsigned int)trace.addr;
+            // printf("\n===========Logical Addr: %08X\n", logicalAddr);
 
-            // Handle if page doesnt exist
-            MAP* physicMap = PageLookup(pageTab, logicalAddr);
-            if( physicMap == NULL ){
-                misses++;
-                PageInsert(pageTab, logicalAddr, frame);
-                frame++;
-            } 
-            else {
-                hits++;
-                map = physicMap;
-            }
-        
+            // Insert frame if doesnt exist
+            // if( PageInsert(pageTab, logicalAddr, frame)){
+            //     misses++;
+            //     frame++;
+            // } 
+            // else {
+            //     hits++;
+            // }
+
+            PageInsert(pageTab, logicalAddr, misses) ? misses++  : hits++;
+
+            map = PageLookup(pageTab, logicalAddr);
+            offset = (logicalAddr << vpnBitLen) >> vpnBitLen;
 
             if(flags.o){
                 if( !strcmp(outputMode, "bitmasks") ){
-                    report_bitmasks (levelCount, pageTab->bitmaskAry) ;
+                    report_bitmasks (pageTab->levelCount, pageTab->bitmaskAry) ;
                 }
                 else if( !strcmp(outputMode, "logical2physical") ){
                     unsigned physicalAddr = getPhysicalAddr(map->frame, offset, vpnBitLen);
@@ -167,5 +160,3 @@ int main (int argc, char** argv) {
 
     return 0;
 }
-
-

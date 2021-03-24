@@ -55,16 +55,19 @@ MAP* pageLookupRecursive(LEVEL* level, unsigned int logicalAddr){
 /*  PageInsert()
 *   -   adds new entries to the page table when we have discovered that a page has not yet been allocated 
 */
-void PageInsert(PAGETABLE* pageTab, unsigned int logicalAddr, unsigned int frame){
+unsigned int PageInsert(PAGETABLE* pageTab, unsigned int logicalAddr, unsigned int frame){
 
-    pageInsertRecursive(pageTab->root, logicalAddr, frame);
+    if (PageLookup(pageTab, logicalAddr) == NULL){
+        return pageInsertRecursive(pageTab->root, logicalAddr, frame);
+    }
+    else return 0;
 }
 
 
 /*  pageInsertRecursive()
 *   -   adds new entries to the page table when we have discovered that a page has not yet been allocated 
 */
-void pageInsertRecursive(LEVEL* level, unsigned int logicalAddr, unsigned int frame){
+unsigned int pageInsertRecursive(LEVEL* level, unsigned int logicalAddr, unsigned int frame){
     
     // Get Page index to look up
     unsigned int shift = level->pageTab->shiftAry[level->depth];
@@ -88,8 +91,8 @@ void pageInsertRecursive(LEVEL* level, unsigned int logicalAddr, unsigned int fr
     else{
         level->map[pageIndex].isValid = 1;
         level->map[pageIndex].frame = frame;
+        return 1;
     }
-    
 }
 
 

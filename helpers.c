@@ -35,12 +35,18 @@ unsigned int getBitAry(unsigned int* bitAry, int levelCount, int argc, char** ar
 */
 unsigned int generateBitmask(unsigned int start, unsigned int maskLen){
 
-   unsigned int r = 0;
-   unsigned int i;
-   for (i=start; i<= maskLen; i++)
-       r |= 1 << i;
+    unsigned int nMask = 0;
+    unsigned int i;
+    for (i = 0; i < maskLen; i ++) {
 
-   return r;
+        nMask |= (1 << i);
+    }
+    unsigned int mask = (1<<maskLen) -1;
+    // printf("nMask = %08X\tmask = %08X\teqal? %d\n", nMask, mask, nMask == mask);
+    // printf("shift value %d\n", start - maskLen);
+    nMask <<= (start - maskLen);
+    // printf("final mask %08X\n\n", nMask);
+    return nMask ;
 }
 
 unsigned int getPhysicalAddr(unsigned int frame, unsigned offset, unsigned int vpnBitLen){
