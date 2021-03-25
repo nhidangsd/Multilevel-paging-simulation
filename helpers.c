@@ -35,22 +35,17 @@ unsigned int getBitAry(unsigned int* bitAry, int levelCount, int argc, char** ar
 */
 unsigned int generateBitmask(unsigned int start, unsigned int maskLen){
 
-    unsigned int nMask = 0;
-    unsigned int i;
-    for (i = 0; i < maskLen; i ++) {
+    unsigned int nMask = (1 << maskLen) - 1;
+    // unsigned int i;
+    // for (i = 0; i < maskLen; i ++) {
+    //     nMask |= (1 << i);
+    // }
 
-        nMask |= (1 << i);
-    }
-    unsigned int mask = (1<<maskLen) -1;
-    // printf("nMask = %08X\tmask = %08X\teqal? %d\n", nMask, mask, nMask == mask);
-    // printf("shift value %d\n", start - maskLen);
-    nMask <<= (start - maskLen);
-    // printf("final mask %08X\n\n", nMask);
-    return nMask ;
+    // nMask <<= (start - maskLen);
+    return nMask << (start - maskLen); ;
 }
 
 unsigned int getPhysicalAddr(unsigned int frame, unsigned offset, unsigned int vpnBitLen){
-    // printf("frame %05X\n", frame);
     return frame << (32 - vpnBitLen) | offset;
 }
 
@@ -64,6 +59,8 @@ unsigned int* getPages(unsigned int logicalAdrr, PAGETABLE* pageTab){
     return pages;
 }
 
-unsigned int getPageSize(){
-    return 1;
+unsigned int getPageSize(unsigned int vpnBitLen){
+    unsigned int offsetLen = ADDRESS_LENGTH - vpnBitLen;
+    unsigned int pageSize = ( 1 << offsetLen ) ; // 2^ offsetLen
+    return pageSize;
 }

@@ -63,7 +63,7 @@ void report_summary(unsigned int page_size, unsigned int hits,
  */
 void report_bitmasks(int levels, uint32_t *masks) {
   printf("Bitmasks\n");
-    printf("levels %d\n", levels);
+
   for (int idx=0; idx < levels; idx++) 
     /* show mask entry and move to next */
     printf("level %d mask %08X\n", idx, masks[idx]);

@@ -71,6 +71,11 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
     // Create PageTable to use
     PAGETABLE* pageTab = newPageTab(levelCount, bitAry);
 
+    if(flags.o && !strcmp(outputMode, "bitmasks")){
+        report_bitmasks (pageTab->levelCount, pageTab->bitmaskAry) ;       
+    }        
+
+
     // int i;
     // for (i = 0; i < pageTab->levelCount; i++) {
     //     printf("LEVEL %i INFO: ", i);
@@ -78,8 +83,8 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
     //     printf("BitAry: %d\tMask: %08X\tShift: %i\tEntry Count: %i\n", bitAry[i], pageTab->bitmaskAry[i], pageTab->shiftAry[i], pageTab->entryCountAry[i]);
     // }
 
-    unsigned int hits, misses, addrCount, frame, offset, logicalAddr;
-    hits = misses = addrCount = frame = 0;
+    unsigned int hits, misses, addrCount, logicalAddr, totalByteUsed;
+    hits = misses = addrCount = totalByteUsed = 0;
     MAP* map;
 
     while (!feof(ifp)) {
@@ -93,48 +98,39 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
         if (NextAddress(ifp, &trace)) {
             addrCount++;
             logicalAddr = (unsigned int)trace.addr;
-            // printf("\n===========Logical Addr: %08X\n", logicalAddr);
 
             // Insert frame if doesnt exist
-            // if( PageInsert(pageTab, logicalAddr, frame)){
-            //     misses++;
-            //     frame++;
-            // } 
-            // else {
-            //     hits++;
-            // }
-
-            PageInsert(pageTab, logicalAddr, misses) ? misses++  : hits++;
+            if( PageInsert(pageTab, logicalAddr, misses)){
+                misses++;
+                totalByteUsed += sizeof(LEVEL);
+            } 
+            else {
+                hits++;
+            }
 
             map = PageLookup(pageTab, logicalAddr);
-            offset = (logicalAddr << vpnBitLen) >> vpnBitLen;
 
             if(flags.o){
-                if( !strcmp(outputMode, "bitmasks") ){
-                    report_bitmasks (pageTab->levelCount, pageTab->bitmaskAry) ;
-                }
-                else if( !strcmp(outputMode, "logical2physical") ){
+                unsigned int offset = (logicalAddr << vpnBitLen) >> vpnBitLen;
+
+                if( !strcmp(outputMode, "logical2physical") ){
                     unsigned physicalAddr = getPhysicalAddr(map->frame, offset, vpnBitLen);
                     report_logical2physical (logicalAddr, physicalAddr);
                 }
                 else if( !strcmp(outputMode, "page2frame") ){
-                    unsigned int* pages = getPages(logicalAddr, pageTab);
-                    report_pagemap (logicalAddr, pageTab->levelCount, pages, map->frame);
+                    unsigned int* pageAry = getPages(logicalAddr, pageTab);
+                    report_pagemap (logicalAddr, pageTab->levelCount, pageAry, map->frame);
                 }
                 else if( !strcmp(outputMode, "offset") ){
                     report_logical2offset (logicalAddr, offset);
                 }
-                else if( !strcmp(outputMode, "summary") ){
-                    report_summary (256, hits, addrCount, map->frame, 866180);
-                }
-                else{
-                    fprintf(stderr, "Output mode %s is not supported", outputMode);
-                    exit(1);
-                }
             }
         }
     }
-
+    if(flags.o && !strcmp(outputMode, "summary") ){
+        unsigned int pageSize = getPageSize(vpnBitLen);
+        report_summary (pageSize, hits, addrCount, misses, totalByteUsed);
+    }
 
     /* clean up and return success */
     fclose(ifp);
@@ -150,13 +146,6 @@ int main (int argc, char** argv) {
     parseArgs(argc, argv, &flags, &addrLimit, &outputMode, &levelCount);
 
     runMultiPageTabSimulator(argc, argv, flags, addrLimit, outputMode, levelCount);
-
-
-    // printf("levelCount = %d\n", levelCount);
-    // printf("addrLimit = %d\n", addrLimit);
-    // printf("outputMode = %s\n", outputMode);
-    // printf("n = %d\n", flags.n);
-    // printf("o = %d\n", flags.o);
 
     return 0;
 }
