@@ -35,20 +35,20 @@ unsigned int getBitAry(unsigned int* bitAry, int levelCount, int argc, char** ar
 */
 unsigned int generateBitmask(unsigned int start, unsigned int maskLen){
 
-    unsigned int nMask = (1 << maskLen) - 1;
-    // unsigned int i;
-    // for (i = 0; i < maskLen; i ++) {
-    //     nMask |= (1 << i);
-    // }
-
-    // nMask <<= (start - maskLen);
-    return nMask << (start - maskLen); ;
+    unsigned int nMask = (1 << maskLen) - 1; // 2^maskLen - 1, example : 2^3 - 1 = 1000 - 1 = 111
+    return nMask << (start - maskLen); 
 }
 
+/*  getPhysicalAddr()
+*   -   converts Logical Addr to Physical Addr
+*/
 unsigned int getPhysicalAddr(unsigned int frame, unsigned offset, unsigned int vpnBitLen){
     return frame << (32 - vpnBitLen) | offset;
 }
 
+/*  getPages()
+*   -   creates an array containing the page index for each level
+*/
 unsigned int* getPages(unsigned int logicalAdrr, PAGETABLE* pageTab){
     unsigned int* pages = (unsigned int*) calloc(pageTab->levelCount, sizeof(unsigned int *));
     int i;
@@ -59,8 +59,11 @@ unsigned int* getPages(unsigned int logicalAdrr, PAGETABLE* pageTab){
     return pages;
 }
 
+/*  getPageSize()
+*   -   calculate the page size in bytes
+*/
 unsigned int getPageSize(unsigned int vpnBitLen){
     unsigned int offsetLen = ADDRESS_LENGTH - vpnBitLen;
     unsigned int pageSize = ( 1 << offsetLen ) ; // 2^ offsetLen
-    return pageSize;
+    return pageSize ;
 }

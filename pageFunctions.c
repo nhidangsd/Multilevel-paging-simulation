@@ -31,22 +31,16 @@ MAP* pageLookupRecursive(LEVEL* level, unsigned int logicalAddr){
     unsigned int shift = level->pageTab->shiftAry[level->depth];
     unsigned int bitMask = level->pageTab->bitmaskAry[level->depth];
     unsigned int pageIndex = LogicalToPage(logicalAddr, bitMask, shift);
-    // printf("------LOOKUP-----\n");
-    // printf("shift = %d\n", shift);
-    // printf("bitMask = %08X\n", bitMask);
-    // printf("pageIndex = %08X\n", pageIndex);
-    // printf("level info:\n-  hasNextLevel = %d\n-    depth = %d\n", 
-    // level->hasNextLevel, level->depth);
 
     if (level->hasNextLevel){
-        // printf("------LOOKUP NEXT LEVEL-----\n");
+
         // return NULL if Page is not found else go to next level
         return (level->nextLevel[pageIndex] != NULL) 
                 ?   pageLookupRecursive(level->nextLevel[pageIndex], logicalAddr)
                 :   NULL ;
     }
 
-    // Return NULL if map is valid else return map
+    // Return NULL if map is valid else return the valid MAP
     else return (level->map[pageIndex].isValid) ? &level->map[pageIndex] : NULL;
     
 }
@@ -73,21 +67,17 @@ unsigned int pageInsertRecursive(LEVEL* level, unsigned int logicalAddr, unsigne
     unsigned int shift = level->pageTab->shiftAry[level->depth];
     unsigned int bitMask = level->pageTab->bitmaskAry[level->depth];
     unsigned int pageIndex = LogicalToPage(logicalAddr, bitMask, shift);
-    // printf("\n------INSERT LEVEL %d-----\n", level->depth);
-    // printf("shift = %d\n", shift);
-    // printf("bitMask = %08X\n", bitMask);
-    // printf("pageIndex = %d\n", pageIndex);
-    // printf("level info:\n-  hasNextLevel = %d\n-    depth = %d\n", 
-    // level->hasNextLevel, level->depth);
 
+    // Allocate memmory for next Level if this is not the last Level
     if (level->hasNextLevel){
 
         if(level->nextLevel[pageIndex] == NULL){
             level->nextLevel[pageIndex] = newLevel(level->pageTab, level->depth +1);
         }
-        // level->map[pageIndex].isValid = 0;
+
         return pageInsertRecursive(level->nextLevel[pageIndex], logicalAddr, frame);
     }
+    // Else allocate memory for the Map
     else{
         level->map[pageIndex].isValid = 1;
         level->map[pageIndex].frame = frame;
@@ -151,10 +141,12 @@ LEVEL* newLevel(PAGETABLE* pageTab, int depth){
     level->hasNextLevel = (depth < pageTab->levelCount - 1)? 1 : 0;
     level->pageTab = pageTab;
 
+    // Allocate memmory for next Level if this is not the last Level
     if (level->hasNextLevel){
         level->nextLevel = (LEVEL**) calloc(pageTab->entryCountAry[depth], sizeof(LEVEL**));
         level->map = NULL;
     }
+    // Else allocate memory for the Map
     else{
         level->map = (MAP*) calloc(pageTab->entryCountAry[depth], sizeof(MAP));
         level->nextLevel = NULL;

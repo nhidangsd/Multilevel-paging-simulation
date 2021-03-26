@@ -9,6 +9,26 @@
 #include "byutr.h"
 #include "output_mode_helpers.h"
 
+/*
+*   Driver Program
+*/
+int main (int argc, char** argv) {
+
+    OPTION_ARGS flags = {0};
+    char* outputMode = {0};
+    int levelCount;
+    unsigned int addrLimit;
+
+    // read in all args from terminal and pass them into appropriate variable
+    parseArgs(argc, argv, &flags, &addrLimit, &outputMode, &levelCount);
+
+    // execute the Simulation
+    runMultiPageTabSimulator(argc, argv, flags, addrLimit, outputMode, levelCount);
+
+    return 0;
+}
+
+
 /*  parseArgs()
 *   - scans the argc and argv to get num of levels
 *   - set the Option Arguments on if there is any
@@ -52,6 +72,10 @@ void parseArgs(int argc, char** argv, OPTION_ARGS* flags, unsigned int* addrLimi
     }
 }
 
+
+/*  runMultiPageTabSimulator()
+*   - performs the MultiPaging simulaion
+*/
 void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addrLimit,char* outputMode, int levelCount){
 
     FILE *ifp;	            // trace file
@@ -71,25 +95,20 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
     // Create PageTable to use
     PAGETABLE* pageTab = newPageTab(levelCount, bitAry);
 
+    // Display Bitmask used if -o bitmasks is on
     if(flags.o && !strcmp(outputMode, "bitmasks")){
         report_bitmasks (pageTab->levelCount, pageTab->bitmaskAry) ;       
     }        
 
-
-    // int i;
-    // for (i = 0; i < pageTab->levelCount; i++) {
-    //     printf("LEVEL %i INFO: ", i);
-    //     printf("levelCount %d: \n", pageTab->levelCount);
-    //     printf("BitAry: %d\tMask: %08X\tShift: %i\tEntry Count: %i\n", bitAry[i], pageTab->bitmaskAry[i], pageTab->shiftAry[i], pageTab->entryCountAry[i]);
-    // }
-
     unsigned int hits, misses, addrCount, logicalAddr, totalByteUsed;
-    hits = misses = addrCount = totalByteUsed = 0;
+    hits = misses = addrCount = 0;
     MAP* map;
+    totalByteUsed = sizeof(PAGETABLE);
 
+    // Process each logical address till EOF
     while (!feof(ifp)) {
 
-        // only the first N memory references if flag -n is ON
+        // only process the first (addrLimit) logical addr if flag -n is ON
         if(flags.n && addrCount >= addrLimit){
             break;
         }
@@ -99,18 +118,20 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
             addrCount++;
             logicalAddr = (unsigned int)trace.addr;
 
-            // Insert frame if doesnt exist
+            // Insert new frame if doesnt exist
             if( PageInsert(pageTab, logicalAddr, misses)){
                 misses++;
-                totalByteUsed += sizeof(LEVEL);
+                totalByteUsed += sizeof(LEVEL) ;
             } 
             else {
                 hits++;
             }
 
-            map = PageLookup(pageTab, logicalAddr);
+            map = PageLookup(pageTab, logicalAddr); // get the map when it's valid
 
             if(flags.o){
+
+                // extract the offset bits
                 unsigned int offset = (logicalAddr << vpnBitLen) >> vpnBitLen;
 
                 if( !strcmp(outputMode, "logical2physical") ){
@@ -127,25 +148,13 @@ void runMultiPageTabSimulator(int argc, char** argv, OPTION_ARGS flags, int addr
             }
         }
     }
-    if(flags.o && !strcmp(outputMode, "summary") ){
+
+    // If -o is not specify or -o is specify with "summary" as output mode, print summary report
+    if(!flags.o || (flags.o && !strcmp(outputMode, "summary")) ){
         unsigned int pageSize = getPageSize(vpnBitLen);
         report_summary (pageSize, hits, addrCount, misses, totalByteUsed);
     }
 
-    /* clean up and return success */
+    // clean up
     fclose(ifp);
-}
-
-int main (int argc, char** argv) {
-
-    OPTION_ARGS flags = {0};
-    char* outputMode = 0;
-    int levelCount;
-    unsigned int addrLimit;
-
-    parseArgs(argc, argv, &flags, &addrLimit, &outputMode, &levelCount);
-
-    runMultiPageTabSimulator(argc, argv, flags, addrLimit, outputMode, levelCount);
-
-    return 0;
 }
